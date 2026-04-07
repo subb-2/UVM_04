@@ -93,7 +93,10 @@ class ram_write_seq extends uvm_sequence #(ram_seq_item);
             item = ram_seq_item::type_id::create($sformatf("item_%0d", i));
 
             start_item(item);
-            if (!item.randomize() with {we == 1;}) begin
+            if (!item.randomize() with {
+                    we == 1;
+                    addr inside {[0 : 5]};
+                }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
             end
             finish_item(item);
@@ -122,7 +125,10 @@ class ram_read_seq extends uvm_sequence #(ram_seq_item);
             item = ram_seq_item::type_id::create($sformatf("item_%0d", i));
 
             start_item(item);
-            if (!item.randomize() with {we == 0;}) begin
+            if (!item.randomize() with {
+                    we == 0;
+                    addr inside {[0 : 5]};
+                }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
             end
             finish_item(item);
@@ -151,7 +157,7 @@ class ram_both_seq extends uvm_sequence #(ram_seq_item);
             item = ram_seq_item::type_id::create($sformatf("item_%0d", i));
 
             start_item(item);
-            if (!item.randomize()) begin
+            if (!item.randomize() with {addr inside {[0 : 5]};}) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
             end
             finish_item(item);
@@ -226,10 +232,10 @@ class ram_driver extends uvm_driver #(ram_seq_item);
     endfunction
 
     virtual task drive_item(ram_seq_item item);
+        @(negedge ram_if.clk);
         ram_if.we <= item.we;
         ram_if.addr <= item.addr;
         ram_if.wdata <= item.wdata;
-        @(posedge ram_if.clk);
     endtask  //drive_item
 
     virtual task run_phase(uvm_phase phase);
@@ -247,12 +253,14 @@ class ram_monitor extends uvm_monitor;
     virtual ram_if ram_if;
 
     logic [15:0] expected_ram[0:255];
+    //logic [7:0] pre_addr;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
         for (int i = 0; i < 256; i++) begin
             expected_ram[i] = 0;
         end
+        //pre_addr = 0;
     endfunction  //new()
 
     virtual function void build_phase(uvm_phase phase);
@@ -266,30 +274,51 @@ class ram_monitor extends uvm_monitor;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-        `uvm_info(get_type_name(), "run phase execution", UVM_DEBUG);
-        forever begin
-            @(posedge ram_if.clk);
-            `uvm_info(get_type_name(), "@(posedge ram_if.clk) wait", UVM_DEBUG);
-            
-            if (ram_if.we) begin
-                expected_ram[ram_if.addr] = ram_if.wdata;
-            end else begin
-                if (expected_ram[ram_if.addr] == ram_if.rdata) begin
-                    `uvm_info(get_type_name(),
-                              $sformatf(
-                                  "PASS! expected_data = %0d, rdata = %0d",
-                                  expected_ram[ram_if.addr], ram_if.rdata),
-                              UVM_LOW)
-                end else begin
-                    `uvm_error(get_type_name(),
-                               $sformatf(
-                                   "FAIL!! expected_data = %0d, rdata = %0d",
-                                   expected_ram[ram_if.addr], ram_if.rdata))
-                end
+    `uvm_info(get_type_name(), "run phase execution", UVM_DEBUG);
+
+    forever begin
+        @(posedge ram_if.clk);
+        #1;
+
+        if (ram_if.we === 1'b1) begin
+            expected_ram[ram_if.addr] = ram_if.wdata;
+
+            `uvm_info(
+                get_type_name(),
+                $sformatf(
+                    "WRITE MONITOR addr = %0d, wdata = %0d",
+                    ram_if.addr, ram_if.wdata
+                ),
+                UVM_DEBUG
+            );
+        end
+        else if (ram_if.we === 1'b0) begin
+            if (expected_ram[ram_if.addr] === ram_if.rdata) begin
+                `uvm_info(
+                    get_type_name(),
+                    $sformatf(
+                        "PASS! addr = %0d, expected_data = %0d, rdata = %0d",
+                        ram_if.addr,
+                        expected_ram[ram_if.addr],
+                        ram_if.rdata
+                    ),
+                    UVM_LOW
+                );
+            end
+            else begin
+                `uvm_error(
+                    get_type_name(),
+                    $sformatf(
+                        "FAIL!! expected_data = %0d, rdata = %0d, check_addr = %0d",
+                        expected_ram[ram_if.addr],
+                        ram_if.rdata,
+                        ram_if.addr
+                    )
+                );
             end
         end
-
-    endtask
+    end
+endtask
 endclass  //ram_monitor
 
 class ram_agent extends uvm_agent;
@@ -363,13 +392,13 @@ class ram_test extends uvm_test;
         #100;
         phase.drop_objection(this);
     endtask
-    
+
     virtual function void report_phase(uvm_phase phase);
         uvm_report_server svr = uvm_report_server::get_server();
         if (svr.get_severity_count(UVM_ERROR) == 0) begin
             `uvm_info(get_type_name(), "===== TEST PASS ! =====", UVM_LOW)
         end else begin
-            `uvm_info(get_type_name(), "===== TEST PASS ! =====", UVM_LOW)
+            `uvm_info(get_type_name(), "===== FAIL PASS ! =====", UVM_LOW)
         end
     endfunction
 endclass  //ram_test
