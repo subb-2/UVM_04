@@ -7,7 +7,7 @@ VCS_OPTS += -timescale=1ns/1ps
 VCS_OPTS += -debug_access+all -kdb -lca
 
 SIM_OPTS := +UVM_TESTNAME=$(TC)
-SIM_OPTS += +UVM_VERBOSITY=UVM_DEBUG
+SIM_OPTS += +UVM_VERBOSITY=UVM_HIGH
 SIM_OPTS += +ntb_random_seed=$(SEED)
 
 .PHONY: compile sim clean
@@ -17,7 +17,10 @@ compile:
 	@echo "타겟 [$@] 완료"
 
 sim: compile
-	./simv $(SIM_OPTS)
+	./simv $(SIM_OPTS) +UVM_TESTNAME="reset_seq_test"
+	./simv $(SIM_OPTS) +UVM_TESTNAME="counter_seq_test"
+	./simv $(SIM_OPTS) +UVM_TESTNAME="repeat_seq_test"
+	./simv $(SIM_OPTS) +UVM_TESTNAME="drop_seq_test"
 	@echo "의존 타겟 [$<] 완료"
 	@echo "타겟 [$@] 완료"
 

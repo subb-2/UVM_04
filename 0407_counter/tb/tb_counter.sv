@@ -9,10 +9,137 @@ interface counter_if (
     logic [3:0] count;
 endinterface  //counter_if
 
+//transaction
+class counter_seq_item extends uvm_sequence_item;
+    //object 부류
+    rand bit       rst_n;
+    rand bit       enable;
+    rand bit       cycles;
+    logic    [3:0] count;
+
+    //{} 안의 값을 랜덤 값으로 대입하겠다.
+    constraint c_cycles {cycles inside {[1 : 20]};}
+
+    //필드 변수값을 factory에 등록
+    `uvm_object_utils_begin(counter_seq_item)
+        `uvm_field_int(rst_n, UVM_ALL_ON)
+        `uvm_field_int(enable, UVM_ALL_ON)
+        `uvm_field_int(cycles, UVM_ALL_ON)
+        `uvm_field_int(count, UVM_ALL_ON)
+    `uvm_object_utils_end
+
+    function new(string name = "counter_seq_item");
+        super.new(name);
+    endfunction  //new()
+
+    //한 번에 읽는 방법
+    //factory 묶음을 주고 받고?
+    function string convert2string;
+        return $sformatf(
+            "rst_n=%0b enable=%0b cycles=%0d count=%0h",
+            rst_n,
+            enable,
+            cycles,
+            count
+        );
+    endfunction
+
+endclass  //counter_seq_item
+
+class counter_reset_seq extends uvm_sequence #(counter_seq_item);
+    `uvm_object_utils(counter_reset_seq)
+
+    //구조에 등록시키기 위함
+    function new(string name = "counter_reset_seq");
+        super.new(name);
+    endfunction  //new()
+
+    //실제 동작하는 위치 
+    virtual task body();
+        //class handler
+        counter_seq_item item;
+        item = counter_seq_item::type_id::create("item");
+
+        //driver와 통신하는 부분 
+        start_item(item);
+        //item 준비된 상태에서 item 값 대임
+        item.rst_n  = 0;
+        item.enable = 0;
+        item.cycles = 2;
+        finish_item(item);
+        `uvm_info(get_type_name(), "Reset Done!", UVM_MEDIUM)
+    endtask  //body
+endclass  //counter_reset_seq
+
+class counter_count_seq extends uvm_sequence #(counter_seq_item);
+    `uvm_object_utils(counter_count_seq)
+
+    int num_transactions;
+
+    //구조에 등록시키기 위함
+    function new(string name = "counter_count_seq");
+        super.new(name);
+        num_transactions = 0;
+    endfunction  //new()
+
+    //실제 동작하는 위치 
+    virtual task body();
+        counter_seq_item item;
+        for (int i = 0; i < num_transactions; i++) begin
+            //get_type_name()이 $sformatf 이름이라고?
+            item = counter_seq_item::type_id::create($sformatf("item_%0d", i));
+
+            start_item(item);
+            //실제 동작하는 값 
+            //with는 조건 하에 랜덤을 만들라는 의미 
+            if (!item.randomize() with {
+                    rst_n == 1;
+                    enable == 1;
+                    cycles inside {[1 : 5]};
+                })
+                `uvm_fatal(get_type_name(), "Randomization failde!")
+            finish_item(item);
+
+            `uvm_info(
+                get_type_name(), $sformatf(
+                "[%0d/%0d] %s", i + 1, num_transactions, item.convert2string()),
+                UVM_HIGH)
+        end
+    endtask  //body
+endclass  //counter_count_seq
+
+//묶는 역할 
+class counter_master_seq extends uvm_sequence #(counter_seq_item);
+    `uvm_object_utils(counter_master_seq)
+
+    //구조에 등록시키기 위함
+    function new(string name = "counter_master_seq");
+        super.new(name);
+    endfunction  //new()
+
+    //실제 동작하는 위치 
+    virtual task body();
+        counter_reset_seq reset_seq;
+        counter_count_seq count_seq;
+
+        `uvm_info(get_type_name(), "===== Phase 1 : Reset =====", UVM_MEDIUM)
+        reset_seq = counter_reset_seq::type_id::create("reset_seq");
+        reset_seq.start(m_sequencer);
+
+        `uvm_info(get_type_name(), "===== Phase 2 : Count =====", UVM_MEDIUM)
+        count_seq = counter_count_seq::type_id::create("count_seq");
+        count_seq.num_transactions = 5;
+        count_seq.start(m_sequencer);
+
+        `uvm_info(get_type_name(), "===== Master Sequence done =====",
+                  UVM_MEDIUM)
+    endtask  //body
+endclass  //counter_master_seq
+
 //uvm component를 상속받겠다.
 //이 클래스를 factory에 등록해줘야지
 //uvm 동작할 때 동작이 가능함 
-class counter_driver extends uvm_component;
+class counter_driver extends uvm_driver #(counter_seq_item);
     `uvm_component_utils(counter_driver)
     virtual counter_if c_if;
 
@@ -36,50 +163,28 @@ class counter_driver extends uvm_component;
         `uvm_info(get_type_name(), "build_phase 실행 완료.", UVM_HIGH);
     endfunction
 
-    //drv가 dut로 데이터 전송?
-
-    virtual task reset_dut();
-        c_if.rst_n  = 0;
-        c_if.enable = 0;
-        repeat (2) @(posedge c_if.clk);
-        c_if.rst_n = 1;
-        @(posedge c_if.clk);
-        `uvm_info(get_type_name(), "리셋 완료", UVM_HIGH);
-    endtask  //reset_dut
-
-    virtual task drive_count(int num_clocks);
-        //clock이 들어올 때마다 count
-        //en = 1 일 때만, count
-        c_if.enable = 1;
-        repeat (num_clocks) @(posedge c_if.clk);
-        c_if.enable = 0;
-        `uvm_info(get_type_name(), $sformatf("drive_count : %0d", num_clocks),
+    virtual task drive_item(counter_seq_item item);
+        c_if.rst_n  <= item.rst_n;
+        c_if.enable <= item.enable;
+        repeat (item.cycles) @(posedge c_if.clk);
+        `uvm_info(get_type_name(), $sformatf("driver_cycles: %0d", item.cycles),
                   UVM_HIGH);
     endtask  //drive_count
 
     //driver에서 stimulus를 생성해서 넣어주는 형식으로 제작할 것
     virtual task run_phase(uvm_phase phase);
-        phase.raise_objection(this);
-        // reset 실행 
-        reset_dut();
-        // 10 clock count 
-        drive_count(10);
-        // 3 clock count stop, recount 5 clock
-        repeat (3) @(posedge c_if.clk);
-        drive_count(5);
-        //total 15 clock count 
-        #20;
-        phase.drop_objection(this);
+        counter_seq_item item;
+        forever begin
+            seq_item_port.get_next_item(item);
+            drive_item(item);
+            seq_item_port.item_done();
+        end
     endtask
-
-    virtual function void report_phase(uvm_phase phase);
-        super.report_phase(phase);
-    endfunction
 
 endclass  //counter_driver
 
 //받은 값 확인 & 판단 
-class counter_monitor extends uvm_component;
+class counter_monitor extends uvm_monitor;
     `uvm_component_utils(counter_monitor)
     virtual counter_if c_if;
     //판단을 위한 비교 변수 
@@ -109,7 +214,8 @@ class counter_monitor extends uvm_component;
         forever begin
             //mon은 계속 확인하고 있는 것
             @(posedge c_if.clk);
-            `uvm_info(get_type_name(), "@(posedge c_if.clk) 대기 실행", UVM_DEBUG);
+            `uvm_info(get_type_name(), "@(posedge c_if.clk) 대기 실행",
+                      UVM_DEBUG);
             #1;
             if (!c_if.rst_n) begin
                 expected_count = 0;
@@ -137,10 +243,12 @@ endclass  //counter_monitor
 
 //agent가 할 일이 뭐였지..
 //그냥 drv, mon build 하는 것 뿐인거 아닌가? 
-class counter_agent extends uvm_component;
+class counter_agent extends uvm_agent;
     `uvm_component_utils(counter_agent)
 
-    counter_driver  drv;
+    uvm_sequencer #(counter_seq_item) sqr;
+
+    counter_driver drv;
     counter_monitor mon;
 
     function new(string name, uvm_component parent);
@@ -151,15 +259,22 @@ class counter_agent extends uvm_component;
     //모든 component class는 phase를 가지고 있음 
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
+        sqr = uvm_sequencer#(counter_seq_item)::type_id::create("sqr", this);
+        `uvm_info(get_type_name(), "sqr 생성", UVM_DEBUG);
         drv = counter_driver::type_id::create("drv", this);
         `uvm_info(get_type_name(), "drv 생성", UVM_DEBUG);
         mon = counter_monitor::type_id::create("mon", this);
         `uvm_info(get_type_name(), "mon 생성", UVM_DEBUG);
     endfunction
 
+    virtual function void connect_phase(uvm_phase phase);
+        super.connect_phase(phase);
+        drv.seq_item_port.connect(sqr.seq_item_export);
+    endfunction
+
 endclass  //counter_agent
 
-class counter_environment extends uvm_component;
+class counter_environment extends uvm_env;
     `uvm_component_utils(counter_environment)
 
     counter_agent agt;
@@ -196,6 +311,28 @@ class counter_test extends uvm_test;
         env = counter_environment::type_id::create("env", this);
         `uvm_info(get_type_name(), "env 생성", UVM_DEBUG);
     endfunction
+
+    virtual task run_phase(uvm_phase phase);
+
+        //counter_master_seq seq;
+
+        counter_reset_seq reset_seq;
+        counter_count_seq count_seq;
+
+        phase.raise_objection(this);
+        //seq = counter_master_seq::type_id::create("seq");
+        //seq.start(env.agt.sqr);
+        reset_seq = counter_reset_seq::type_id::create("reset_seq");
+        reset_seq.start(env.agt.sqr);
+        
+        count_seq = counter_count_seq::type_id::create("count_seq");
+        count_seq.num_transactions = 10;
+        count_seq.start(env.agt.sqr);
+
+        #100;
+        phase.drop_objection(this);
+
+    endtask  //run_phase
 
     //왜 여기서 report 하는게 맞아?
     virtual function void report_phase(uvm_phase phase);
