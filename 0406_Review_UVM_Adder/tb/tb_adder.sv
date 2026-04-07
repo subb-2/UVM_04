@@ -43,6 +43,68 @@ class adder_sequence extends uvm_sequence;
     endtask //body
 endclass //adder_sequence
 
+class adder_driver extends uvm_driver #(adder_seq_item);
+    `uvm_component_utils(adder_driver)
+
+    virtual adder_if a_if;
+    adder_seq_item a_seq_item;
+
+    function new(string name = "ADDER_DRV", uvm_component c);
+        super.new(name, c);
+    endfunction //new()
+
+    virtual function void build_phase(uvm_phase phase);
+        super.new(name, c);
+        a_seq_item = adder_seq_item::type_id::create("SEQ_ITEM", this);
+        if(!uvm_config_db#(virtual adder_if)::get(this, "", "a_if", a_if)) begin
+            `uvm_fatal(get_name(), "Unable to access adder interface");
+        end
+    endfunction
+
+    virtual task run_phase (uvm_phase phase);
+        $display("Display run phase");
+        forever begin
+            seq_item_port.get_next_item(a_seq_item);
+            a_if.a <= a_seq_item.a;
+            a_if.b <= a_seq_item.b;
+            #10;
+            seq_item_port.item_done();
+        end
+    endtask //run_phase
+endclass //adder_driver
+
+class adder_monitor extends uvm_monitor;
+    `uvm_component_utils(adder_monitor)
+
+    uvm_analysis_port#(adder_seq_item) send;
+    virtual adder_if a_if;
+    adder_seq_item a_seq_item;
+
+    function new(string name = "ADDER_MON", uvm_component c);
+        super.new(name, c);
+        send = new("WRITE", this);
+    endfunction //new()
+
+    virtual function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        a_seq_item = adder_seq_item::type_id::create("SEQ_ITEM", this);
+        if (!uvm_config_db#(virtual adder_if)::get(this, "", "a_if", a_if)) begin
+            `uvm_fatal(get_name(), "Unable to access adder interface");
+        end        
+    endfunction
+
+    virtual task run_phase (uvm_phase phase);
+        forever begin
+            #10;
+            a_seq_item.a = a_if.a;
+            a_seq_item.b = a_if.b;
+            a_seq_item.y = a_if.y;
+            `uvm_info("MON", "Send data to Scoreboard", UVM_LOW);
+            send.write(a_seq_item);
+        end
+    endtask //run_phase
+endclass //adder_monitor 
+
 class adder_scoreboard extends uvm_scoreboard;
     `uvm_component_utils(adder_scoreboard)
     uvm_analysis_imp#(adder_seq_item, adder_scoreboard) recv;
@@ -54,8 +116,11 @@ class adder_scoreboard extends uvm_scoreboard;
 
     virtual function void write(adder_seq_item data);
         `uvm_info("SCB", "Data received from Monitor", UVM_LOW);
-        
-        
+        if(data.a + data.b == data.y) begin
+            `uvm_info("SCB", $sformatf("PASS!, a:%0d + b:%0d = y:%0d", data.a, data.b, data.y), UVM_LOW);
+        end else begin
+            `uvm_error("SCB", $sformatf("FAIL!, a:%0d + b:%0d != y:%0d", data.a, data.b, data.y));
+        end
     endfunction
 
 endclass //adder_scoreboard
