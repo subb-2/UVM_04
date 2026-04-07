@@ -18,7 +18,8 @@ class counter_seq_item extends uvm_sequence_item;
     logic    [3:0] count;
 
     //{} 안의 값을 랜덤 값으로 대입하겠다.
-    constraint c_cycles {cycles inside {[1 : 20]};}
+    //시간제어 변수 
+    constraint cycles {cycles inside {[1 : 20]};}
 
     //필드 변수값을 factory에 등록
     `uvm_object_utils_begin(counter_seq_item)
@@ -34,6 +35,7 @@ class counter_seq_item extends uvm_sequence_item;
 
     //한 번에 읽는 방법
     //factory 묶음을 주고 받고?
+    //convert2string : 현재 객체 값을 사람이 읽기 쉬운 문자열로 바꿔주는 함수
     function string convert2string;
         return $sformatf(
             "rst_n=%0b enable=%0b cycles=%0d count=%0h",
@@ -97,7 +99,7 @@ class counter_count_seq extends uvm_sequence #(counter_seq_item);
                     enable == 1;
                     cycles inside {[1 : 5]};
                 })
-                `uvm_fatal(get_type_name(), "Randomization failde!")
+                `uvm_fatal(get_type_name(), "Randomization failed!")
             finish_item(item);
 
             `uvm_info(
@@ -235,10 +237,6 @@ class counter_monitor extends uvm_monitor;
         end
     endtask
 
-    virtual function void report_phase(uvm_phase phase);
-        super.report_phase(phase);
-    endfunction
-
 endclass  //counter_monitor
 
 //agent가 할 일이 뭐였지..
@@ -324,11 +322,10 @@ class counter_test extends uvm_test;
         //seq.start(env.agt.sqr);
         reset_seq = counter_reset_seq::type_id::create("reset_seq");
         reset_seq.start(env.agt.sqr);
-        
         count_seq = counter_count_seq::type_id::create("count_seq");
         count_seq.num_transactions = 10;
         count_seq.start(env.agt.sqr);
-
+        
         #100;
         phase.drop_objection(this);
 
