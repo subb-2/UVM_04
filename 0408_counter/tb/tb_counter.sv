@@ -8,6 +8,7 @@ interface counter_if (
     logic       enable;
     logic [3:0] count;
 
+    //drv가 다음 신호들을 DUT에 전달하는 시점 
     clocking drv_cb @(posedge clk);
         //입력 : 이전 타임슬롯, 출력 : 즉시 
         default input #1step output #0;
@@ -333,10 +334,6 @@ class counter_scoreboard extends uvm_scoreboard;
         //first_transaction = 1;
         //expected = 0;
     endfunction  //new()
-
-    virtual function void build_phase(uvm_phase phase);
-        super.build_phase(phase);
-    endfunction
 
     //수신 함수 구현 
     //재정의 방식이기 때문에 write 이름은 고정 

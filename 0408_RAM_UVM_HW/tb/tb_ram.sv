@@ -8,6 +8,22 @@ interface ram_if (
     logic [ 7:0] addr;
     logic [15:0] wdata;
     logic [15:0] rdata;
+
+    clocking drv_cb @(posedge clk);
+        default input #1step output #0;
+        output we;
+        output addr;
+        output wdata;
+    endclocking
+
+    clocking mon_cb @(posedge clk);
+        default input #1step;
+        input we;
+        input addr;
+        input wdata;
+        input rdata;
+    endclocking
+
 endinterface  //ram_if
 
 class ram_seq_item extends uvm_sequence_item;
@@ -15,11 +31,15 @@ class ram_seq_item extends uvm_sequence_item;
     rand bit [ 7:0] addr;
     rand bit [15:0] wdata;
     logic    [15:0] rdata;
+    rand int        cycles;
+
+    constraint cycles_c {cycles inside {[1 : 20]};}
 
     `uvm_object_utils_begin(ram_seq_item)
         `uvm_field_int(we, UVM_ALL_ON)
         `uvm_field_int(addr, UVM_ALL_ON)
         `uvm_field_int(wdata, UVM_ALL_ON)
+        `uvm_field_int(cycles, UVM_ALL_ON)
     `uvm_object_utils_end
 
     function new(string name = "ram_seq_item");
@@ -27,7 +47,13 @@ class ram_seq_item extends uvm_sequence_item;
     endfunction  //new()
 
     function string convert2string;
-        return $sformatf("we = %0b, addr = %0d, wdata = %0d", we, addr, wdata);
+        return $sformatf(
+            "we = %0b, addr = %0d, wdata = %0d, cycles = %0d",
+            we,
+            addr,
+            wdata,
+            cycles
+        );
     endfunction
 endclass  //ram_seq_item
 
@@ -47,12 +73,14 @@ class ram_one_write_seq extends uvm_sequence #(ram_seq_item);
                 we == 1;
                 addr == 10;
                 wdata == 10;
+                cycles inside {[1 : 5]};
             }) begin
             `uvm_fatal(get_type_name(), "Randomization failed!")
         end
         finish_item(item);
 
-        `uvm_info(get_type_name(), $sformatf("One Write: %s", item.convert2string()), UVM_LOW)
+        `uvm_info(get_type_name(), $sformatf("One Write: %s",
+                                             item.convert2string()), UVM_LOW)
     endtask  //body
 endclass  //ram_one_write_seq
 
@@ -72,12 +100,14 @@ class ram_one_read_seq extends uvm_sequence #(ram_seq_item);
                 we == 0;
                 addr == 10;
                 wdata == 10;
+                cycles inside {[1 : 5]};
             }) begin
             `uvm_fatal(get_type_name(), "Randomization failed!")
         end
         finish_item(item);
 
-        `uvm_info(get_type_name(), $sformatf("One Read: %s", item.convert2string()), UVM_LOW)
+        `uvm_info(get_type_name(), $sformatf("One Read: %s",
+                                             item.convert2string()), UVM_LOW)
     endtask  //body
 endclass  //ram_one_read_seq
 
@@ -100,6 +130,7 @@ class ram_write_seq extends uvm_sequence #(ram_seq_item);
             if (!item.randomize() with {
                     we == 1;
                     addr inside {[0 : 5]};
+                    cycles inside {[1 : 5]};
                 }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
             end
@@ -132,6 +163,7 @@ class ram_read_seq extends uvm_sequence #(ram_seq_item);
             if (!item.randomize() with {
                     we == 0;
                     addr inside {[0 : 5]};
+                    cycles inside {[1 : 5]};
                 }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
             end
@@ -161,7 +193,10 @@ class ram_both_seq extends uvm_sequence #(ram_seq_item);
             item = ram_seq_item::type_id::create($sformatf("item_%0d", i));
 
             start_item(item);
-            if (!item.randomize() with {addr inside {[0 : 5]};}) begin
+            if (!item.randomize() with {
+                    addr inside {[0 : 5]};
+                    cycles inside {[1 : 5]};
+                }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
             end
             finish_item(item);
@@ -192,30 +227,30 @@ class ram_master_seq extends uvm_sequence #(ram_seq_item);
                   UVM_MEDIUM)
         one_write_seq = ram_one_write_seq::type_id::create("one_write_seq");
         one_write_seq.start(m_sequencer);
-        #20;
+        //#10;
 
         `uvm_info(get_type_name(), "===== Phase 2 : One Read =====", UVM_MEDIUM)
         one_read_seq = ram_one_read_seq::type_id::create("one_read_seq");
         one_read_seq.start(m_sequencer);
-        #20;
+        //#10;
 
         `uvm_info(get_type_name(), "===== Phase 3 : Write =====", UVM_MEDIUM)
         write_seq = ram_write_seq::type_id::create("write_seq");
         write_seq.num_transactions = 10;
         write_seq.start(m_sequencer);
-        #20;
+        //#10;
 
         `uvm_info(get_type_name(), "===== Phase 4 : Read =====", UVM_MEDIUM)
         read_seq = ram_read_seq::type_id::create("read_seq");
         read_seq.num_transactions = 10;
         read_seq.start(m_sequencer);
-        #20;
+        //#10;
 
         `uvm_info(get_type_name(), "===== Phase 5 : Both =====", UVM_MEDIUM)
         both_seq = ram_both_seq::type_id::create("both_seq");
         both_seq.num_transactions = 10;
         both_seq.start(m_sequencer);
-        #20;
+        //#10;
 
         `uvm_info(get_type_name(), "===== Master Sequence done =====",
                   UVM_MEDIUM)
@@ -226,6 +261,8 @@ endclass  //ram_master_seq
 class ram_driver extends uvm_driver #(ram_seq_item);
     `uvm_component_utils(ram_driver)
     virtual ram_if ram_if;
+
+    event drv_ev;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -241,11 +278,20 @@ class ram_driver extends uvm_driver #(ram_seq_item);
     endfunction
 
     virtual task drive_item(ram_seq_item item);
-        @(negedge ram_if.clk);
-        ram_if.we <= item.we;
-        ram_if.addr <= item.addr;
-        ram_if.wdata <= item.wdata;
+        //@(negedge ram_if.clk);
+        ram_if.drv_cb.we <= item.we;
+        ram_if.drv_cb.addr <= item.addr;
+        ram_if.drv_cb.wdata <= item.wdata;
+        `uvm_info(get_type_name(), $sformatf("driver_cycles: %0d", item.cycles),
+                  UVM_HIGH);
+        `uvm_info(get_type_name(), item.convert2string(), UVM_MEDIUM);
+        repeat (item.cycles) @(ram_if.drv_cb);
+        @(ram_if.drv_cb);
+            ->drv_ev;
+
+        //@(ram_if.drv_cb);
     endtask  //drive_item
+
 
     virtual task run_phase(uvm_phase phase);
         ram_seq_item item;
@@ -261,19 +307,17 @@ class ram_monitor extends uvm_monitor;
     `uvm_component_utils(ram_monitor)
     virtual ram_if ram_if;
 
-    logic [15:0] expected_ram[0:255];
-    //logic [7:0] pre_addr;
+    event drv_ev;
+
+    uvm_analysis_port #(ram_seq_item) ap;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-        //for (int i = 0; i < 256; i++) begin
-        //    expected_ram[i] = 0;
-        //end
-        //pre_addr = 0;
     endfunction  //new()
 
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
+        ap = new("ap", this);
         if (!uvm_config_db#(virtual ram_if)::get(
                 this, "", "ram_if", ram_if
             )) begin
@@ -283,52 +327,76 @@ class ram_monitor extends uvm_monitor;
     endfunction
 
     virtual task run_phase(uvm_phase phase);
-    `uvm_info(get_type_name(), "run phase execution", UVM_DEBUG);
-
-    forever begin
-        @(posedge ram_if.clk);
-        #1;
-
-        if (ram_if.we === 1'b1) begin
-            expected_ram[ram_if.addr] = ram_if.wdata;
-
-            `uvm_info(
-                get_type_name(),
-                $sformatf(
-                    "WRITE MONITOR addr = %0d, wdata = %0d",
-                    ram_if.addr, ram_if.wdata
-                ),
-                UVM_DEBUG
-            );
+        `uvm_info(get_type_name(), "run phase execution", UVM_DEBUG);
+        forever begin
+            ram_seq_item item = ram_seq_item::type_id::create("item");
+            @(drv_ev);
+            //@(posedge ram_if.clk);
+            //#1;
+            // @(ram_if.mon_cb);
+            item.we = ram_if.mon_cb.we;
+            item.addr = ram_if.mon_cb.addr;
+            item.wdata = ram_if.mon_cb.wdata;
+            item.rdata = ram_if.mon_cb.rdata;
+            ap.write(item);
+            `uvm_info(get_type_name(), item.convert2string(), UVM_MEDIUM);
         end
-        else if (ram_if.we === 1'b0) begin
-            if (expected_ram[ram_if.addr] === ram_if.rdata) begin
-                `uvm_info(
-                    get_type_name(),
-                    $sformatf(
-                        "PASS! addr = %0d, expected_data = %0d, rdata = %0d",
-                        ram_if.addr,
-                        expected_ram[ram_if.addr],
-                        ram_if.rdata
-                    ),
-                    UVM_LOW
-                );
-            end
-            else begin
-                `uvm_error(
-                    get_type_name(),
-                    $sformatf(
-                        "FAIL!! expected_data = %0d, rdata = %0d, check_addr = %0d",
-                        expected_ram[ram_if.addr],
-                        ram_if.rdata,
-                        ram_if.addr
-                    )
-                );
-            end
-        end
-    end
-endtask
+
+    endtask
 endclass  //ram_monitor
+
+class ram_scoreboard extends uvm_scoreboard;
+    `uvm_component_utils(ram_scoreboard)
+
+    uvm_analysis_imp #(ram_seq_item, ram_scoreboard) ap_imp;
+
+    logic [15:0] expected_ram[0:255];
+    int error_data;
+    int match_data;
+    int write_data;
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+        ap_imp = new("ap_imp", this);
+        error_data = 0;
+        match_data = 0;
+        write_data = 0;
+    endfunction  //new()
+
+    virtual function void write(ram_seq_item item);
+        `uvm_info(get_type_name(), $sformatf(
+                  "Received : %s", item.convert2string()), UVM_MEDIUM);
+
+        if (item.we === 1'b1) begin
+            expected_ram[item.addr] = item.wdata;
+            `uvm_info(
+                get_type_name(), $sformatf(
+                "WRITE MONITOR addr = %0d, wdata = %0d", item.addr, item.wdata),
+                UVM_DEBUG);
+            write_data++;
+        end else if (item.we === 1'b0) begin
+            if (expected_ram[item.addr] === item.rdata) begin
+                `uvm_info(get_type_name(), $sformatf(
+                          "PASS! addr = %0d, expected_data = %0d, rdata = %0d",
+                          item.addr,
+                          expected_ram[item.addr],
+                          item.rdata
+                          ), UVM_LOW);
+                match_data++;
+            end else begin
+                `uvm_error(get_type_name(), $sformatf(
+                           "FAIL!! expected_data = %0d, rdata = %0d, check_addr = %0d",
+                           expected_ram[item.addr],
+                           item.rdata,
+                           item.addr
+                           ));
+                error_data++;
+            end
+        end
+
+    endfunction
+
+endclass  //ram_scoreboard
 
 class ram_agent extends uvm_agent;
     `uvm_component_utils(ram_agent)
@@ -336,6 +404,8 @@ class ram_agent extends uvm_agent;
     uvm_sequencer #(ram_seq_item) sqr;
     ram_driver drv;
     ram_monitor mon;
+
+    event drv_ev;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -350,6 +420,9 @@ class ram_agent extends uvm_agent;
         `uvm_info(get_type_name(), "drv generation", UVM_DEBUG);
         mon = ram_monitor::type_id::create("mon", this);
         `uvm_info(get_type_name(), "mon generation", UVM_DEBUG);
+
+        drv.drv_ev =drv_ev;
+        mon.drv_ev =drv_ev;
     endfunction
 
     virtual function void connect_phase(uvm_phase phase);
@@ -362,6 +435,7 @@ class ram_environment extends uvm_env;
     `uvm_component_utils(ram_environment)
 
     ram_agent agt;
+    ram_scoreboard scb;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -371,7 +445,13 @@ class ram_environment extends uvm_env;
     virtual function void build_phase(uvm_phase phase);
         super.build_phase(phase);
         agt = ram_agent::type_id::create("agt", this);
+        scb = ram_scoreboard::type_id::create("scb", this);
         `uvm_info(get_type_name(), "agt generation", UVM_DEBUG);
+    endfunction
+
+    virtual function void connect_phase(uvm_phase phase);
+        super.connect_phase(phase);
+        agt.mon.ap.connect(scb.ap_imp);
     endfunction
 endclass  //ram_environment
 
