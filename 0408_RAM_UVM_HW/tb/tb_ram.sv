@@ -129,7 +129,7 @@ class ram_write_seq extends uvm_sequence #(ram_seq_item);
             start_item(item);
             if (!item.randomize() with {
                     we == 1;
-                    addr inside {[0 : 5]};
+                    //addr inside {[0 : 5]};
                     cycles inside {[1 : 5]};
                 }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
@@ -162,7 +162,7 @@ class ram_read_seq extends uvm_sequence #(ram_seq_item);
             start_item(item);
             if (!item.randomize() with {
                     we == 0;
-                    addr inside {[0 : 5]};
+                    //addr inside {[0 : 5]};
                     cycles inside {[1 : 5]};
                 }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
@@ -194,7 +194,7 @@ class ram_both_seq extends uvm_sequence #(ram_seq_item);
 
             start_item(item);
             if (!item.randomize() with {
-                    addr inside {[0 : 5]};
+                    //addr inside {[0 : 5]};
                     cycles inside {[1 : 5]};
                 }) begin
                 `uvm_fatal(get_type_name(), "Randomization failed!")
@@ -287,7 +287,7 @@ class ram_driver extends uvm_driver #(ram_seq_item);
         `uvm_info(get_type_name(), item.convert2string(), UVM_MEDIUM);
         repeat (item.cycles) @(ram_if.drv_cb);
         @(ram_if.drv_cb);
-            ->drv_ev;
+        ->drv_ev;
 
         //@(ram_if.drv_cb);
     endtask  //drive_item
@@ -344,6 +344,79 @@ class ram_monitor extends uvm_monitor;
 
     endtask
 endclass  //ram_monitor
+
+class ram_coverage extends uvm_subscriber #(ram_seq_item);
+    `uvm_component_utils(ram_coverage)
+
+    ram_seq_item item;
+
+    covergroup ram_cg;
+        cp_we: coverpoint item.we {bins write = {1}; bins read = {1};}
+        cp_addr: coverpoint item.addr {
+            bins zero = {8'h00};
+            bins low = {[8'h01 : 8'h3F]};
+            bins mid1 = {[8'h40 : 8'h7F]};
+            bins mid2 = {[8'h80 : 8'hBF]};
+            bins high = {[8'hC0 : 8'hFE]};
+            bins last = {8'hFF};
+        }
+        cp_wdata: coverpoint item.wdata {
+            bins zero = {0};
+            bins low = {[1 : 16384]};
+            bins mid1 = {[16385 : 32768]};
+            bins mid2 = {[32769 : 49152]};
+            bins high = {[49153 : 65535]};
+            bins last = {65536};
+        }
+        cp_rdata: coverpoint item.rdata {
+            bins zero = {0};
+            bins low = {[1 : 16384]};
+            bins mid1 = {[16385 : 32768]};
+            bins mid2 = {[32769 : 49152]};
+            bins high = {[49153 : 65535]};
+            bins last = {65536};
+        }
+
+        cx_we_addr: cross cp_we, cp_addr;
+
+    endgroup
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+        ram_cg = new();
+    endfunction  //new()
+
+    virtual function void write(ram_seq_item t);
+        item = t;
+
+        ram_cg.sample();
+        `uvm_info(get_type_name(), $sformatf(
+                  "ram_cg sampled : %s", item.convert2string()), UVM_MEDIUM)
+
+    endfunction
+
+    virtual function void report_phase(uvm_phase phase);
+        `uvm_info(get_type_name(), "\n\n===== Coverage Summary =====", UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "     Overall : %.1f%%", ram_cg.get_coverage()), UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "     we : %.1f%%", ram_cg.cp_we.get_coverage()), UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "     addr : %.1f%%", ram_cg.cp_addr.get_coverage()),
+                  UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "     wdata : %.1f%%", ram_cg.cp_wdata.get_coverage()),
+                  UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "     rdata : %.1f%%", ram_cg.cp_rdata.get_coverage()),
+                  UVM_LOW);
+        `uvm_info(
+            get_type_name(), $sformatf(
+            "     cross(we, addr) : %.1f%%", ram_cg.cx_we_addr.get_coverage()),
+            UVM_LOW);
+        `uvm_info(get_type_name(), "===== Coverage Summary =====\n\n", UVM_LOW);
+    endfunction
+endclass  //ram_coverage 
 
 class ram_scoreboard extends uvm_scoreboard;
     `uvm_component_utils(ram_scoreboard)
@@ -421,8 +494,8 @@ class ram_agent extends uvm_agent;
         mon = ram_monitor::type_id::create("mon", this);
         `uvm_info(get_type_name(), "mon generation", UVM_DEBUG);
 
-        drv.drv_ev =drv_ev;
-        mon.drv_ev =drv_ev;
+        drv.drv_ev = drv_ev;
+        mon.drv_ev = drv_ev;
     endfunction
 
     virtual function void connect_phase(uvm_phase phase);
