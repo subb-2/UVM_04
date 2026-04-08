@@ -51,6 +51,8 @@ class ram_one_write_seq extends uvm_sequence #(ram_seq_item);
             `uvm_fatal(get_type_name(), "Randomization failed!")
         end
         finish_item(item);
+
+        `uvm_info(get_type_name(), $sformatf("One Write: %s", item.convert2string()), UVM_LOW)
     endtask  //body
 endclass  //ram_one_write_seq
 
@@ -74,6 +76,8 @@ class ram_one_read_seq extends uvm_sequence #(ram_seq_item);
             `uvm_fatal(get_type_name(), "Randomization failed!")
         end
         finish_item(item);
+
+        `uvm_info(get_type_name(), $sformatf("One Read: %s", item.convert2string()), UVM_LOW)
     endtask  //body
 endclass  //ram_one_read_seq
 
@@ -188,25 +192,30 @@ class ram_master_seq extends uvm_sequence #(ram_seq_item);
                   UVM_MEDIUM)
         one_write_seq = ram_one_write_seq::type_id::create("one_write_seq");
         one_write_seq.start(m_sequencer);
+        #20;
 
         `uvm_info(get_type_name(), "===== Phase 2 : One Read =====", UVM_MEDIUM)
         one_read_seq = ram_one_read_seq::type_id::create("one_read_seq");
         one_read_seq.start(m_sequencer);
+        #20;
 
         `uvm_info(get_type_name(), "===== Phase 3 : Write =====", UVM_MEDIUM)
         write_seq = ram_write_seq::type_id::create("write_seq");
         write_seq.num_transactions = 10;
         write_seq.start(m_sequencer);
+        #20;
 
         `uvm_info(get_type_name(), "===== Phase 4 : Read =====", UVM_MEDIUM)
         read_seq = ram_read_seq::type_id::create("read_seq");
         read_seq.num_transactions = 10;
         read_seq.start(m_sequencer);
+        #20;
 
         `uvm_info(get_type_name(), "===== Phase 5 : Both =====", UVM_MEDIUM)
         both_seq = ram_both_seq::type_id::create("both_seq");
         both_seq.num_transactions = 10;
         both_seq.start(m_sequencer);
+        #20;
 
         `uvm_info(get_type_name(), "===== Master Sequence done =====",
                   UVM_MEDIUM)
@@ -257,9 +266,9 @@ class ram_monitor extends uvm_monitor;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-        for (int i = 0; i < 256; i++) begin
-            expected_ram[i] = 0;
-        end
+        //for (int i = 0; i < 256; i++) begin
+        //    expected_ram[i] = 0;
+        //end
         //pre_addr = 0;
     endfunction  //new()
 
@@ -398,7 +407,7 @@ class ram_test extends uvm_test;
         if (svr.get_severity_count(UVM_ERROR) == 0) begin
             `uvm_info(get_type_name(), "===== TEST PASS ! =====", UVM_LOW)
         end else begin
-            `uvm_info(get_type_name(), "===== FAIL PASS ! =====", UVM_LOW)
+            `uvm_info(get_type_name(), "===== TEST FAIL ! =====", UVM_LOW)
         end
     endfunction
 endclass  //ram_test

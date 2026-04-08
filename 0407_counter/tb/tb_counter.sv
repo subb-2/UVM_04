@@ -332,13 +332,15 @@ class counter_test extends uvm_test;
     endtask  //run_phase
 
     //왜 여기서 report 하는게 맞아?
+    //error가 있으면 fail
     virtual function void report_phase(uvm_phase phase);
         //super.report_phase(phase);
+        //sim 중에 출력되는 메시지 모두 수집 역할 
         uvm_report_server svr = uvm_report_server::get_server();
         if (svr.get_severity_count(UVM_ERROR) == 0) begin
             `uvm_info(get_type_name(), "===== TEST PASS ! =====", UVM_LOW)
         end else begin
-            `uvm_info(get_type_name(), "===== TEST PASS ! =====", UVM_LOW)
+            `uvm_info(get_type_name(), "===== TEST FAIL ! =====", UVM_LOW)
         end
     endfunction
 
