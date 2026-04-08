@@ -236,19 +236,19 @@ class ram_master_seq extends uvm_sequence #(ram_seq_item);
 
         `uvm_info(get_type_name(), "===== Phase 3 : Write =====", UVM_MEDIUM)
         write_seq = ram_write_seq::type_id::create("write_seq");
-        write_seq.num_transactions = 10;
+        write_seq.num_transactions = 256;
         write_seq.start(m_sequencer);
         //#10;
 
         `uvm_info(get_type_name(), "===== Phase 4 : Read =====", UVM_MEDIUM)
         read_seq = ram_read_seq::type_id::create("read_seq");
-        read_seq.num_transactions = 10;
+        read_seq.num_transactions = 256;
         read_seq.start(m_sequencer);
         //#10;
 
         `uvm_info(get_type_name(), "===== Phase 5 : Both =====", UVM_MEDIUM)
         both_seq = ram_both_seq::type_id::create("both_seq");
-        both_seq.num_transactions = 10;
+        both_seq.num_transactions = 70000;
         both_seq.start(m_sequencer);
         //#10;
 
@@ -509,6 +509,7 @@ class ram_environment extends uvm_env;
 
     ram_agent agt;
     ram_scoreboard scb;
+    ram_coverage cov;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -519,12 +520,14 @@ class ram_environment extends uvm_env;
         super.build_phase(phase);
         agt = ram_agent::type_id::create("agt", this);
         scb = ram_scoreboard::type_id::create("scb", this);
+        cov = ram_coverage::type_id::create("cov", this);
         `uvm_info(get_type_name(), "agt generation", UVM_DEBUG);
     endfunction
 
     virtual function void connect_phase(uvm_phase phase);
         super.connect_phase(phase);
         agt.mon.ap.connect(scb.ap_imp);
+        agt.mon.ap.connect(cov.analysis_export);
     endfunction
 endclass  //ram_environment
 
