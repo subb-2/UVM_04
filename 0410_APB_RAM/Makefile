@@ -1,4 +1,4 @@
-TC ?= ram_base_test
+TC ?= apb_write_read_test
 SEED ?= 1234
 
 VCS_OPTS := -full64 -sverilog
@@ -8,7 +8,7 @@ VCS_OPTS += -debug_access+all -kdb -lca
 VCS_OPTS += +incdir+./tb
 VCS_OPTS += -cm line+cond+fsm+tgl+branch+assert
 
-SIM_OPTS := +UVM_VERBOSITY=UVM_HIGH
+SIM_OPTS := +UVM_VERBOSITY=UVM_DEBUG
 SIM_OPTS += +ntb_random_seed=$(SEED)
 SIM_OPTS += +UVM_TESTNAME=$(TC)
 SIM_OPTS += -cm line+cond+fsm+tgl+branch+assert
@@ -25,8 +25,14 @@ compile:
 sim: compile
 	./simv $(SIM_OPTS)
 
-verdi:
+verdi: sim
 	verdi $(VERDI_OPTS)
+
+vw: sim
+	verdi -dbdir simv.daidir -ssf novas.fsdb &
+
+vc: sim
+	verdi -cov -covdir coverage.vdb & 
 
 clean:
 	rm -rf simv* csrc *.key *.h *.log *.fsdb novas* *.conf *Log

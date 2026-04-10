@@ -72,6 +72,8 @@ class apb_write_read_seq extends apb_base_seq;
             //addr = (i * 4) % 64;
             addr = (i % 64) * 4;
 
+            wdata = $urandom;
+
             if (!item.randomize() with {})
                 `uvm_fatal(get_type_name(), "Randomization Fail!");
             do_write(addr, wdata);

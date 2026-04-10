@@ -54,6 +54,7 @@ class apb_driver extends uvm_driver #(apb_seq_item);
     task drive_apb(apb_seq_item tx);
         // SETUP phase 
         @(vif.drv_cb);
+        `uvm_info("D_CHECK", $sformatf("%s / %b", tx.convert2string(), tx.pwrite), UVM_DEBUG)
         vif.drv_cb.psel    <= 1;
         vif.drv_cb.penable <= 0;
         vif.drv_cb.pwrite  <= tx.pwrite;
