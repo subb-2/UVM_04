@@ -54,7 +54,6 @@ class ram_write_read_test extends ram_base_test;
     endfunction  //new()
 
     virtual task run_test_seq();
-        //test에서는 시퀀스 부르는 일이 가장 핵심 
         ram_write_read_sequence seq = ram_write_read_sequence::type_id::create(
             "seq"
         );
