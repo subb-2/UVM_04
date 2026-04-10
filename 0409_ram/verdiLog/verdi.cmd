@@ -163,3 +163,4 @@ wvSetCursor -win $_nWave2 52820.099875 -snap {("r_if(ram_if)" 5)}
 wvSetCursor -win $_nWave2 55795.880150 -snap {("r_if(ram_if)" 4)}
 verdiDockWidgetSetCurTab -dock windowDock_InteractiveConsole_3
 verdiSetActWin -win $_InteractiveConsole_3
+debExit

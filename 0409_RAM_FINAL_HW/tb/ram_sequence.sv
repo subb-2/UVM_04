@@ -5,6 +5,7 @@
 import uvm_pkg::*;
 `include "ram_seq_item.sv"
 
+//템플릿 
 class ram_random_sequence extends uvm_sequence #(ram_seq_item);
     `uvm_object_utils(ram_random_sequence)
 
@@ -41,14 +42,14 @@ class ram_write_read_sequence extends uvm_sequence #(ram_seq_item);
         repeat (num_transactions) begin
             ram_seq_item item = ram_seq_item::type_id::create("item");
 
-            start_item(item);
-            //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
-            if (!item.randomize() with {we == 1;})
+            start_item(
+                item); //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
+            if (!item.randomize() with {we == 1; cycles == 1;})
                 `uvm_fatal(get_type_name(), "Randomization Fail!");
             finish_item(item);  //send item driver
 
-            start_item(item);
-            // wait driver signal 드라이버가 다 처리할 때까지 대기 
+            start_item(
+                item); // wait driver signal 드라이버가 다 처리할 때까지 대기 
             //주소는 그대로 유지 
             item.we = 0;
             finish_item(item);  //send item driver
@@ -67,24 +68,26 @@ class ram_full_sweep_sequence extends uvm_sequence #(ram_seq_item);
     virtual task body();
         ram_seq_item item = ram_seq_item::type_id::create("item");
 
+        start_item(
+            item); //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
         for (int i = 0; i < 2 ** 8; i++) begin
-            start_item(item);
-            //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
             if (!item.randomize() with {
                     we == 1;
                     addr == i;
+                    cycles == 1;
                 })
                 `uvm_fatal(get_type_name(), "Randomization Fail!");
-            finish_item(item);  //send item driver
         end
+        finish_item(item);  //send item driver
 
+        start_item(
+            item); //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
         for (int i = 0; i < 2 ** 8; i++) begin
-            start_item(item);
-            //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
             item.we   = 0;
             item.addr = i;
-            finish_item(item);  //send item driver
+            cycles == 1;
         end
+        finish_item(item);  //send item driver
     endtask  //body
 
 endclass  //component 
