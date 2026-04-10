@@ -1,41 +1,33 @@
-// 템플릿을 따로 만들어서 사용하기 위한 작업
-//정의되어있지 않으면, 정의하라는 의미 
-`ifndef COMPONENT_SV
-`define COMPONENT_SV
-//include 했을 때, 반복해서 부르지 않기 위함
-//이름이 정의되어있지 않으면 내부를 정의해라라는 의미
-//또 다시 부르면, 이미 정의되어있으므로, 안에 있는 내용을 실행하지 않고 그냥 빠져 나옴
-//`timescale 1ns/1ps
+`ifndef AGENT_SV
+`define AGENT_SV
+
 `include "uvm_macros.svh"
 import uvm_pkg::*;
+`include "apb_ram_seq_item.sv"
 
-//템플릿 
-class component extends uvm_component;
-    `uvm_component_utils(component)
+typedef uvm_sequencer#(apb_seq_item) apb_sequencer;
+
+class apb_agent extends uvm_agent;
+    `uvm_component_utils(apb_agent)
+
+    apb_driver drv;
+    apb_monitor mon;
+    apb_sequencer sqr;
+    //uvm_sequencer #(apb_seq_item) sqr;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-    endfunction //new()
+        drv = apb_driver::type_id::create("drv", this);
+        mon = apb_monitor::type_id::create("mon", this);
+        sqr = apb_sequencer::type_id::create("sqr", this);
+    endfunction  //new()
 
     //scb, cov 경우에는 report 까지 하는 경우도 있음
     virtual function void build_phase(uvm_phase phase);
-        super.build_phase(phase);    
-        
+        super.build_phase(phase);
+        drv.seq_item_port.connect(sqr.seq_item_export);
     endfunction
 
-    virtual function void connect_phase(uvm_phase phase);    
-        super.build_phase(phase);    
+endclass  //component 
 
-    endfunction
-
-    virtual task run_phase (uvm_phase phase);
-        
-    endtask //run_phase
-
-    virtual function void report_phase (uvm_phase phase);
-        
-    endfunction
-
-endclass //component 
-
-`endif 
+`endif

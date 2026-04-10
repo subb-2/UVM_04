@@ -1,41 +1,89 @@
-// 템플릿을 따로 만들어서 사용하기 위한 작업
-//정의되어있지 않으면, 정의하라는 의미 
-`ifndef COMPONENT_SV
-`define COMPONENT_SV
-//include 했을 때, 반복해서 부르지 않기 위함
-//이름이 정의되어있지 않으면 내부를 정의해라라는 의미
-//또 다시 부르면, 이미 정의되어있으므로, 안에 있는 내용을 실행하지 않고 그냥 빠져 나옴
-//`timescale 1ns/1ps
+`ifndef COVERAGE_SV
+`define COVERAGE_SV
+
 `include "uvm_macros.svh"
 import uvm_pkg::*;
+`include "apb_ram_seq_item.sv"
 
 //템플릿 
-class component extends uvm_component;
-    `uvm_component_utils(component)
+class apb_coverage extends uvm_subscriber #(apb_seq_item);
+    `uvm_component_utils(apb_coverage)
+
+    //covergroup 만들기 위해 seq_item 필요
+    apb_seq_item tx;
+
+    covergroup apb_cg;
+
+        cp_addr: coverpoint tx.paddr {
+            bins addr_low = {[8'h00 : 8'h3C]};
+            bins addr_mid_low = {[8'h40 : 8'h7C]};
+            bins addr_mid_high = {[8'h80 : 8'hBC]};
+            bins addr_high = {[8'hC0 : 8'hFC]};
+        }
+
+        cp_rw: coverpoint tx.pwrite {
+            bins write_op = {1'b1}; bins read_op = {1'b0};
+        }
+        //high low 못 받음 
+        //cp_enable: coverpoint penable;
+        cp_wdata: coverpoint tx.pwdata {
+            bins all_zeros = {32'h0000_0000};
+            bins all_ones = {32'hFFFF_FFFF};
+            //보통 이렇게 많이 봄 
+            bins all_a = {32'haaaa_aaaa};
+            bins all_5 = {32'h5555_5555};
+            //나머지 
+            bins all_other = default;
+        }
+
+        //cp_psel: coverpoint psel;
+        cp_rdata: coverpoint tx.prdata {
+            bins all_zeros = {32'h0000_0000};
+            bins all_ones = {32'hFFFF_FFFF};
+            //보통 이렇게 많이 봄 
+            bins all_a = {32'haaaa_aaaa};
+            bins all_5 = {32'h5555_5555};
+            //나머지 
+            bins all_other = default;
+        }
+        //의미 x
+        //cp_addr: coverpoint pready;
+        cx_addr_rw: cross cp_addr, cp_rw;
+    endgroup
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-    endfunction //new()
+        apb_cg = new();
+    endfunction  //new()
 
-    //scb, cov 경우에는 report 까지 하는 경우도 있음
-    virtual function void build_phase(uvm_phase phase);
-        super.build_phase(phase);    
-        
+    function void write(apb_seq_item t);
+        tx = t;
+        //sample을 하면 수집됨 
+        apb_cg.sample();
     endfunction
 
-    virtual function void connect_phase(uvm_phase phase);    
-        super.build_phase(phase);    
+    virtual function void report_phase(uvm_phase phase);
+        `uvm_info(get_type_name(), "===== Coverage Summary =====", UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "    Overall : %.1f%%", apb_cg.get_coverage()), UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "    addr : %.1f%%", apb_cg.cp_addr.get_coverage()), UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "    rw : %.1f%%", apb_cg.cp_rw.get_coverage()), UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "    wdata : %.1f%%", apb_cg.cp_wdata.get_coverage()),
+                  UVM_LOW);
+        `uvm_info(get_type_name(), $sformatf(
+                  "    rdata : %.1f%%", apb_cg.cp_rdata.get_coverage()),
+                  UVM_LOW);
+        `uvm_info(
+            get_type_name(), $sformatf(
+            "    cross(rw, addr) : %.1f%%", apb_cg.cx_addr_rw.get_coverage()),
+            UVM_LOW);
+        `uvm_info(get_type_name(), "===== Coverage Summary =====\n\n", UVM_LOW);
 
     endfunction
 
-    virtual task run_phase (uvm_phase phase);
-        
-    endtask //run_phase
+endclass  //component 
 
-    virtual function void report_phase (uvm_phase phase);
-        
-    endfunction
-
-endclass //component 
-
-`endif 
+`endif

@@ -13,6 +13,7 @@ class apb_scoreboard extends uvm_scoreboard;
 
     //reference 값 만들기
     logic [31:0] ref_mem[0:(2**6-1)];
+    logic [31:0] expected;
 
     int num_writes = 0;
     int num_reads = 0;
@@ -37,7 +38,7 @@ class apb_scoreboard extends uvm_scoreboard;
         end else begin
             //read일 때 빼기
             num_reads++;
-            logic [31:0] expected = ref_mem[tx.paddr>>2];
+            expected = ref_mem[tx.paddr>>2];
             if (expected !== tx.prdata) begin
                 num_errors++;
                 `uvm_error(

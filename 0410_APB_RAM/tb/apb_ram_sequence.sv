@@ -1,90 +1,106 @@
-`ifndef RAM_SEQUENCE_SV
-`define RAM_SEQUENCE_SV
+`ifndef APB_RAM_SEQUENCE_SV
+`define APB_RAM_SEQUENCE_SV
 
 `include "uvm_macros.svh"
 import uvm_pkg::*;
-`include "ram_seq_item.sv"
+`include "apb_ram_seq_item.sv"
 
-class ram_random_sequence extends uvm_sequence #(ram_seq_item);
-    `uvm_object_utils(ram_random_sequence)
+class apb_base_seq extends uvm_sequence #(apb_seq_item);
+    `uvm_object_utils(apb_base_seq)
 
-    int num_transactions = 0;
+    int num_loop = 0;
 
-    function new(string name = "ram_random_sequence");
+    function new(string name = "apb_base_seq");
+        super.new(name);
+    endfunction  //new()
+
+    //매개변수로 주소와 데이터를 받고 싶음
+    //괄호 안에 입력을 넣는 것 
+    //randomize는 의미 없게 되긴 했음 -> 랜덤이 아닌 값을 집어 넣음 
+    task do_write(bit [7:0] addr, bit [31:0] data);
+        apb_seq_item item;
+        item = apb_seq_item::type_id::create("item");
+        start_item(item);
+        if (!item.randomize() with {
+                pwrite == 1'b1;
+                paddr == addr;
+                pwdata == data;
+            })
+            `uvm_fatal(get_type_name(), "do_write() Randomize() fail!")
+            finish_item(item);
+            `uvm_info(get_type_name(), $sformatf("do_write() write 전송 완료: addr = 0x%02h data = 0x%08h", addr, data), UVM_MEDIUM)
+    endtask  //do_write
+
+     task do_read(bit [7:0] addr, output bit [31:0] rdata);
+        apb_seq_item item;
+        item = apb_seq_item::type_id::create("item");
+        start_item(item);
+        if (!item.randomize() with {
+                pwrite == 1'b0;
+                paddr == addr;
+            })
+            `uvm_fatal(get_type_name(), "do_read() Randomize() fail!")
+            finish_item(item);
+            rdata = item.prdata;
+            `uvm_info(get_type_name(), $sformatf("do_read() read 전송 완료: addr = 0x%02h data = 0x%08h", addr, rdata), UVM_MEDIUM)
+    endtask  //do_read
+
+    virtual task body();
+
+    endtask  //body
+
+endclass  //component 
+
+class apb_write_read_seq extends apb_base_seq;
+    `uvm_object_utils(apb_write_read_seq)
+
+    int num_loop = 0;
+    bit [7:0]  addr;
+    bit [31:0] wdata;
+    bit [31:0] rdata;
+
+    function new(string name = "apb_write_read_seq");
         super.new(name);
     endfunction  //new()
 
     virtual task body();
-        repeat (num_transactions) begin
-            ram_seq_item item = ram_seq_item::type_id::create("item");
 
-            start_item(item);
-            if (!item.randomize())
+        for (int i = 0; i < num_loop; i++) begin
+            apb_seq_item item = apb_seq_item::type_id::create("item");
+
+            //지금 뭐가 문제야?
+            //addr = (i * 4) % 64;
+            addr = (i % 64) * 4;
+
+            if (!item.randomize() with {})
                 `uvm_fatal(get_type_name(), "Randomization Fail!");
+            do_write(addr, wdata);
+            do_read(addr, rdata);
+        end
+    endtask  //body
+
+endclass  //component 
+
+class apb_rand_seq extends apb_base_seq;
+    `uvm_object_utils(apb_rand_seq)
+
+    int num_loop = 0;
+    bit [7:0] addr;
+    bit [7:0] wdata, rdat;
+
+    function new(string name = "apb_rand_seq");
+        super.new(name);
+    endfunction  //new()
+
+    virtual task body();
+        repeat(num_loop) begin
+            apb_seq_item item = apb_seq_item::type_id::create("item");
+            start_item(item);
+            if(!item.randomize()) 
+                `uvm_fatal(get_type_name(), "Randomize() Fail!")
             finish_item(item);
         end
-    endtask  //body
-
-endclass  //component 
-
-class ram_write_read_sequence extends uvm_sequence #(ram_seq_item);
-    `uvm_object_utils(ram_write_read_sequence)
-
-    int num_transactions = 0;
-
-    function new(string name = "ram_write_read_sequence");
-        super.new(name);
-    endfunction  //new()
-
-    virtual task body();
-
-        repeat (num_transactions) begin
-            ram_seq_item item = ram_seq_item::type_id::create("item");
-
-            start_item(item);
-            //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
-            if (!item.randomize() with {we == 1;})
-                `uvm_fatal(get_type_name(), "Randomization Fail!");
-            finish_item(item);  //send item driver
-
-            start_item(item);
-            // wait driver signal 드라이버가 다 처리할 때까지 대기 
-            //주소는 그대로 유지 
-            item.we = 0;
-            finish_item(item);  //send item driver
-        end
-    endtask  //body
-
-endclass  //component 
-
-class ram_full_sweep_sequence extends uvm_sequence #(ram_seq_item);
-    `uvm_object_utils(ram_full_sweep_sequence)
-
-    function new(string name = "ram_full_sweep_sequence");
-        super.new(name);
-    endfunction  //new()
-
-    virtual task body();
-        ram_seq_item item = ram_seq_item::type_id::create("item");
-
-        for (int i = 0; i < 2 ** 8; i++) begin
-            start_item(item);
-            //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
-            if (!item.randomize() with {
-                    we == 1;
-                    addr == i;
-                })
-                `uvm_fatal(get_type_name(), "Randomization Fail!");
-            finish_item(item);  //send item driver
-        end
-
-        for (int i = 0; i < 2 ** 8; i++) begin
-            start_item(item);
-            //wait driver signal 드라이버가 보내달라고 할 때까지 대기 
-            item.we   = 0;
-            item.addr = i;
-            finish_item(item);  //send item driver
-        end
+        
     endtask  //body
 
 endclass  //component 

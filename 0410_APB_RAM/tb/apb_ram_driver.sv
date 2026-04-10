@@ -73,7 +73,7 @@ class apb_driver extends uvm_driver #(apb_seq_item);
         vif.drv_cb.penable <= 0;
 
         `uvm_info(get_type_name(),
-                  %sformatf("drv apb 구동 완료: %s", tx.convert2string()),
+                  $sformatf("drv apb 구동 완료: %s", tx.convert2string()),
                   UVM_MEDIUM)
     endtask  //drive_apb
 

@@ -33,7 +33,7 @@ interface apb_if (
         input pready;
     endclocking
 
-    modport mp_drv(clocking drv_cb, input clk, input presetn);
-    modport mp_mon(clocking mon_cb, input clk, input presetn);
+    modport mp_drv(clocking drv_cb, input pclk, input presetn);
+    modport mp_mon(clocking mon_cb, input pclk, input presetn);
 
 endinterface  //apb_if

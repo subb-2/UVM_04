@@ -1,41 +1,70 @@
-// 템플릿을 따로 만들어서 사용하기 위한 작업
-//정의되어있지 않으면, 정의하라는 의미 
-`ifndef COMPONENT_SV
-`define COMPONENT_SV
-//include 했을 때, 반복해서 부르지 않기 위함
-//이름이 정의되어있지 않으면 내부를 정의해라라는 의미
-//또 다시 부르면, 이미 정의되어있으므로, 안에 있는 내용을 실행하지 않고 그냥 빠져 나옴
-//`timescale 1ns/1ps
+`ifndef TEST_SV
+`define TEST_SV
+
 `include "uvm_macros.svh"
 import uvm_pkg::*;
 
-//템플릿 
-class component extends uvm_component;
-    `uvm_component_utils(component)
+class apb_base_test extends uvm_test;
+    `uvm_component_utils(apb_base_test)
+
+    apb_env env;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
-    endfunction //new()
+    endfunction  //new()
 
     //scb, cov 경우에는 report 까지 하는 경우도 있음
     virtual function void build_phase(uvm_phase phase);
-        super.build_phase(phase);    
-        
+        super.build_phase(phase);
+        env = apb_env::type_id::create("env", this);
     endfunction
 
-    virtual function void connect_phase(uvm_phase phase);    
-        super.build_phase(phase);    
-
+    virtual function void end_of_elaboration_phase(uvm_phase phase);
+        `uvm_info(get_type_name(), "===== UVM 계층 구조 =====", UVM_MEDIUM)
+        uvm_top.print_topology();
     endfunction
 
-    virtual task run_phase (uvm_phase phase);
-        
-    endtask //run_phase
+    virtual task run_phase(uvm_phase phase);
 
-    virtual function void report_phase (uvm_phase phase);
-        
-    endfunction
+    endtask  //run_phase
 
-endclass //component 
+endclass  //component 
 
-`endif 
+class apb_write_read_test extends apb_base_test;
+    `uvm_component_utils(apb_write_read_test)
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction  //new()
+
+    virtual task run_phase(uvm_phase phase);
+        apb_write_read_seq seq;
+        phase.raise_objection(this);
+        seq = apb_write_read_seq::type_id::create("seq");
+        seq.num_loop = 10;
+        seq.start(env.agt.sqr);
+        phase.drop_objection(this);
+    endtask  //run_phase
+
+endclass  //component  
+
+class apb_rand_test extends apb_base_test;
+    `uvm_component_utils(apb_rand_test)
+
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction  //new()
+
+    virtual task run_phase(uvm_phase phase);
+        apb_rand_seq seq;
+        phase.raise_objection(this);
+        seq = apb_rand_seq::type_id::create("seq");
+        seq.num_loop = 10;
+        seq.start(env.agt.sqr);
+        phase.drop_objection(this);
+    endtask  //run_phase
+
+endclass  //component 
+
+
+`endif
