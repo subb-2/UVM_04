@@ -65,3 +65,4 @@ gui_list_select -id CovDetail.1 -list covergroup { {$unit::apb_coverage::apb_cg.
 gui_list_select -id CovDetail.1 -list {covergroup detail} { all_other  all_zeros  all_ones  all_a   }
 gui_list_select -id CovDetail.1 -list {covergroup detail} { all_a  all_ones  all_other  all_zeros   }
 gui_list_select -id CovDetail.1 -list covergroup { {$unit::apb_coverage::apb_cg.cp_rdata}  {$unit::apb_coverage::apb_cg.cp_wdata}   } -type { {Cover Group} {Cover Group}  }
+vdCovExit -noprompt

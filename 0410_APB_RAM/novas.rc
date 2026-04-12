@@ -4,6 +4,9 @@ work = ./work
 [Annotation]
 3D_Active_Annotation = FALSE
 [ColumnCfg]
+covtblAssertList_Assert = true
+covtblAssertList_Match = false
+covtblAssertList_Success = false
 m_hvpDetailPlanEditAttributeListView_V1.1_Name_pos = 0
 m_hvpDetailPlanEditAttributeListView_V1.1_Name_width = 100
 m_hvpDetailPlanEditAttributeListView_V1.1_Name = true
@@ -751,8 +754,8 @@ recent_commands_Verdi = tbvDebugRunContinue,tbvRewindAddCheckpoint,tbvRunDebugMo
 recent_commands_nWave = zoomAll
 SignalCaseInSensitive = FALSE
 ColorTheme = classic
-prevColorTheme = classic
 version = Verdi_W-2024.09-SP2
+prevColorTheme = classic
 [GlobalProp]
 ErrWindow_Font = Helvetica_M_R_12
 [Globals]
@@ -917,7 +920,7 @@ savePropStat = FALSE
 savePropDtl = TRUE
 [QtDialog]
 importDesignForm = 292,569,715,574
-QwUserAskDlg = 1108,579,324,125
+QwUserAskDlg = 1108,592,324,121
 [Relationship]
 hideRecursiceNode = FALSE
 [Safety]
