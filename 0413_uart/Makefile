@@ -1,4 +1,4 @@
-TC ?= apb_write_read_test
+TC ?= uart_rand_test
 SEED ?= 1234
 
 VCS_OPTS := -full64 -sverilog
@@ -10,7 +10,7 @@ VCS_OPTS += -cm line+cond+fsm+tgl+branch+assert
 
 SIM_OPTS := +UVM_VERBOSITY=UVM_DEBUG
 SIM_OPTS += +ntb_random_seed=$(SEED)
-#SIM_OPTS += +UVM_TESTNAME=$(TC)
+SIM_OPTS += +UVM_TESTNAME=$(TC)
 SIM_OPTS += -cm line+cond+fsm+tgl+branch+assert
 SIM_OPTS += -cm_dir coverage.vdb 
 SIM_OPTS += -cm_name sim1 
