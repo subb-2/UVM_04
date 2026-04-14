@@ -2,7 +2,7 @@ Magic 271485
 Revision Verdi_W-2024.09-SP2
 
 ; Window Layout <x> <y> <width> <height> <signalwidth> <valuewidth>
-viewPort 0 25 2560 596 100 65
+viewPort 0 25 1496 598 100 65
 
 ; File list:
 ; openDirFile [-d delimiter] [-s time_offset] [-rf auto_bus_rule_file] path_name file_name
@@ -16,8 +16,8 @@ signalSpacing 5
 
 ; windowTimeUnit is used for zoom, cursor & marker
 ; waveform viewport range
-zoom 249744915.790876 1833508002.181501
-cursor 989555000.000000
+zoom 0.000000 256843.049316
+cursor 65000.000000
 marker 0.000000
 
 ; user define markers
@@ -25,7 +25,7 @@ marker 0.000000
 ; visible top row signal index
 top 0
 ; marker line index
-markerPos 11
+markerPos 9
 
 ; event list
 ; addEvent event_name event_expression
@@ -57,8 +57,6 @@ addSignal -h 15 -holdScope rx
 addSignal -h 15 -UNSIGNED -HEX -holdScope rx_data[7:0]
 addSignal -h 15 -holdScope rx_valid
 addGroup "G2"
-addSignal -h 15 -UNSIGNED /tb_uart/dut/U_UART_TX/state[1:0]
-addGroup "G3"
 
 ; getSignalForm Scope Hierarchy Status
 ; active file of getSignalForm

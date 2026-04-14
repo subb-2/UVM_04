@@ -26,11 +26,11 @@ fdb_campaign =
 fdb_tool = 
 [hb]
 postSimFile = /home/hedu07/KSB/0413_uart/novas.fsdb
-syncTime = 989555000
-viewport = 8 31 2560 1369 0 0 569 2558
-activeNode = "tb_uart.dut.U_UART_TX"
-activeScope = "tb_uart.dut.U_UART_TX"
-activeFile = "./rtl/uart_tx.sv"
+syncTime = 65000
+viewport = 305 165 1496 1102 0 0 571 1494
+activeNode = "tb_uart"
+activeScope = "tb_uart"
+activeFile = "./tb/tb_uart.sv"
 interactiveMode = False
 viewType = Source
 simulatorMode = False
@@ -51,25 +51,23 @@ DnDtraceCrossHierOnly = True
 leadingZero = False
 signalPane = False
 SourceVerticalScrollLines = 5
-Scope1 = "tb_uart.dut.U_UART_TX"
-Scope2 = "tb_uart.dut.U_UART_RX"
-Scope3 = "tb_uart"
-multipleSelection = 1 17 3 0 0
+Scope1 = "tb_uart"
+multipleSelection = 1 0 2 0 0
 sdfCheckUndef = FALSE
 simFlow = FALSE
 [hb.design]
 importCmd = "-dbdir" "simv.daidir" 
 invokeDir = /home/hedu07/KSB/0413_uart
 [hb.sourceTab.1]
-scope = tb_uart.dut.U_UART_TX
-File = /home/hedu07/KSB/0413_uart/rtl/uart_tx.sv
+scope = tb_uart
+File = /home/hedu07/KSB/0413_uart/tb/tb_uart.sv
 Line = 1
 [nMemoryManager]
 WaveformFile = /home/hedu07/KSB/0413_uart/novas.fsdb
 UserActionNum = 0
 nMemWindowNum = 0
 [wave.0]
-viewPort = 0 25 2560 596 100 65
+viewPort = 0 25 1496 598 100 65
 primaryWindow = TRUE
 SessionFile = /home/hedu07/KSB/0413_uart/verdiLog/novas_autosave.ses.wave.0
 displayGrid = FALSE

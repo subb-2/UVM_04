@@ -38,3 +38,4 @@ wvZoomOut -win $_nWave2
 wvSetCursor -win $_nWave2 60949.108746 -snap {("dut" 4)}
 wvSetCursor -win $_nWave2 64064.718139 -snap {("dut" 4)}
 wvSetCursor -win $_nWave2 66206.699596 -snap {("dut" 4)}
+debExit
