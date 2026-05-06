@@ -1,4 +1,4 @@
-TC ?= i2c_full_test
+TC ?= spi_data_rand_test
 SEED ?= 1234
 
 VCS_OPTS := -full64 -sverilog
@@ -15,7 +15,7 @@ SIM_OPTS += -cm line+cond+fsm+tgl+branch+assert
 SIM_OPTS += -cm_dir coverage.vdb 
 SIM_OPTS += -cm_name sim1 
 
-VERDI_OPTS := -covdir coverage.vdb -dbdir simv.daidir -ssf novas.fsdb
+#VERDI_OPTS := -covdir coverage.vdb -dbdir simv.daidir -ssf novas.fsdb
 
 .PHONY: compile sim clean
 

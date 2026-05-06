@@ -1,0 +1,76 @@
+Magic 271485
+Revision Verdi_W-2024.09-SP2
+
+; Window Layout <x> <y> <width> <height> <signalwidth> <valuewidth>
+viewPort 0 25 1696 569 137 65
+
+; File list:
+; openDirFile [-d delimiter] [-s time_offset] [-rf auto_bus_rule_file] path_name file_name
+openDirFile -d / "" "/home/hedu07/KSB/0419_i2c_uvm/inter.fsdb"
+
+; file time scale:
+; fileTimeScale ### s|ms|us|ns|ps
+
+; signal spacing:
+signalSpacing 5
+
+; windowTimeUnit is used for zoom, cursor & marker
+; waveform viewport range
+zoom 2009916412.500000 6029749237.500000
+cursor 3130065000.000000
+marker 0.000000
+
+; user define markers
+; userMarker time_pos marker_name color linestyle
+; visible top row signal index
+top 2
+; marker line index
+markerPos 9
+
+; event list
+; addEvent event_name event_expression
+; curEvent event_name
+
+
+
+COMPLEX_EVENT_BEGIN
+
+
+COMPLEX_EVENT_END
+
+
+
+; toolbar current search type
+; curSTATUS search_type
+curSTATUS ByChange
+
+
+addGroup "U_I2C_MASTER_TOP"
+activeDirFile "" "/home/hedu07/KSB/0419_i2c_uvm/inter.fsdb"
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/clk
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/rst
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/cmd_start
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/cmd_write
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/cmd_read
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/cmd_stop
+addSignal -h 15 -UNSIGNED -HEX /tb_i2c/dut/U_I2C_MASTER_TOP/tx_data[7:0]
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/ack_in
+addSignal -h 15 -UNSIGNED -HEX /tb_i2c/dut/U_I2C_MASTER_TOP/rx_data[7:0]
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/done
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/ack_out
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/busy
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/scl
+addSignal -h 15 /tb_i2c/dut/U_I2C_MASTER_TOP/sda
+addGroup "U_I2C_SlAVE"
+addSignal -h 15 /tb_i2c/dut/U_I2C_SlAVE/clk
+addSignal -h 15 /tb_i2c/dut/U_I2C_SlAVE/rst
+addSignal -h 15 -UNSIGNED -HEX /tb_i2c/dut/U_I2C_SlAVE/tx_data[7:0]
+addSignal -h 15 -UNSIGNED -HEX /tb_i2c/dut/U_I2C_SlAVE/rx_data[7:0]
+addSignal -h 15 /tb_i2c/dut/U_I2C_SlAVE/done
+addSignal -h 15 /tb_i2c/dut/U_I2C_SlAVE/scl
+addSignal -h 15 /tb_i2c/dut/U_I2C_SlAVE/sda
+addGroup "G3"
+
+; getSignalForm Scope Hierarchy Status
+; active file of getSignalForm
+

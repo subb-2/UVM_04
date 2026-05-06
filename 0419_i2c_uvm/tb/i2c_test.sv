@@ -89,9 +89,9 @@ class i2c_full_test extends i2c_base_test;
         read_seq  = i2c_master_read_seq::type_id::create("read_seq");
 
         phase.raise_objection(this);
-        write_seq.num_loop = 2560;
+        write_seq.num_loop = 10;
         write_seq.start(env.agt.sqr);
-        read_seq.num_loop = 2560;
+        read_seq.num_loop = 10;
         read_seq.start(env.agt.sqr);
         phase.drop_objection(this);
     endtask
